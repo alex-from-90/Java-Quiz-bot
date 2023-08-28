@@ -73,35 +73,40 @@ public class QuizTelegramBot extends TelegramLongPollingBot implements BotComman
     }
 
     private void handleInactive(Update update) {
-        if (update.hasMessage() && update.getMessage().hasText() && "/start".equals(update.getMessage().getText())) {
-            isActive = true; // Активируем бота, так как получено сообщение с текстом "/start"
-            sendPoll(update.getMessage().getChatId()); // Отправляем опрос в чат
+        if (update.hasMessage() && update.getMessage().hasText()) {
+            String receivedMessage = update.getMessage().getText().toLowerCase();
+            String botName = getBotUsername().toLowerCase();
+
+            if (receivedMessage.equals("/start") || receivedMessage.equals("/start@" + botName)) {
+                isActive = true; // Активируем бота
+                sendPoll(update.getMessage().getChatId()); // Отправляем опрос в чат
+            }
         }
     }
 
     private void handleTextMessage(Message message) {
         long chatId = message.getChatId();
-        String receivedMessage = message.getText();
-        message.getFrom().getFirstName(); // Получаем имя отправителя сообщения
+        String receivedMessage = message.getText().toLowerCase();
+
+        // Извлекаем имя бота
+        String botName = getBotUsername().toLowerCase();
 
         if (message.getReplyToMessage() != null) {
-            message.getReplyToMessage().getFrom().getFirstName(); // Получаем имя отправителя сообщения, на которое было дано ответное сообщение
+            String replyUserName = message.getReplyToMessage().getFrom().getFirstName();
         }
 
-        switch (receivedMessage) {
-            case "/start" -> {
-                currentQuestionIndex = 0; // Сбрасываем индекс текущего вопроса
-                sendPoll(chatId); // Отправляем опрос в чат
-            }
-            case "/help" -> sendHelpText(chatId); // Отправляем текст помощи в чат
-            case "/next" -> sendCorrectAnswerAndNextQuestion(chatId); // Отправляем правильный ответ и следующий вопрос
-            case "/exit" -> {
-                isActive = false; // Деактивируем бота
-                sendExitMessage(chatId); // Отправляем сообщение о завершении работы бота
-            }
-            default -> {
-            }
-            // Действия по умолчанию, если не совпало ни одно из условий
+        if (receivedMessage.equals("/start") || receivedMessage.equals("/start@" + botName)) {
+            currentQuestionIndex = 0;
+            sendPoll(chatId);
+        } else if (receivedMessage.equals("/help") || receivedMessage.equals("/help@" + botName)) {
+            sendHelpText(chatId);
+        } else if (receivedMessage.equals("/exit") || receivedMessage.equals("/exit@" + botName)) {
+            isActive = false;
+            sendExitMessage(chatId);
+        } else if (receivedMessage.equals("/next")) { // Check for /next command
+            sendCorrectAnswerAndNextQuestion(chatId);
+        } else {
+            // Handle other commands or messages
         }
     }
 
@@ -123,16 +128,17 @@ public class QuizTelegramBot extends TelegramLongPollingBot implements BotComman
     }
 
     private void botAnswerUtils(String receivedMessage, long chatId, String userName, long messageId, String replyUserName) {
-        switch (receivedMessage) {
-            case "/start" -> startBot(chatId, userName); // Запускаем бота при команде "/start"
-            case "/help" -> sendHelpText(chatId); // Отправляем текст помощи при команде "/help"
-            case "/exit" ->
-                    sendExitMessage(chatId); // Отправляем сообщение о завершении работы бота при команде "/exit"
+        String botName = getBotUsername().toLowerCase();
 
-            // Обработка других команд
-            default -> {
-            }
+        // Проверяем, содержит ли receivedMessage имя бота (в нижнем регистре)
+        if (receivedMessage.equals("/start") || receivedMessage.equals("/start@" + botName)) {
+            startBot(chatId, userName);
+        } else if (receivedMessage.equals("/help") || receivedMessage.equals("/help@" + botName)) {
+            sendHelpText(chatId);
+        } else if (receivedMessage.equals("/exit") || receivedMessage.equals("/exit@" + botName)) {
+            sendExitMessage(chatId);
         }
+
     }
 
     private void startBot(long chatId, String userName) {
