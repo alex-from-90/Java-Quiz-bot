@@ -12,7 +12,7 @@ target/
 .settings
 .springBeans
 .sts4-cache
-.config.properties
+
 
 ### IntelliJ IDEA ###
 .idea
@@ -39,4 +39,4 @@ build/
 /mvnw
 /mvnw.cmd
 /src/main/resources/META-INF/
-/src/main/resources/config.properties
+
