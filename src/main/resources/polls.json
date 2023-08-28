@@ -1,5 +1,14 @@
 [
-
+  {
+    "question": "Какой метод используется для вывода текста в консоль?",
+    "options": [
+      "print()",
+      "console.log()",
+      "System.out.println()",
+      "echo()"
+    ],
+    "correctAnswer": "System.out.println()"
+  },
   {
     "question": "Что представляет ключевое слово super?",
     "options": [
@@ -18,7 +27,15 @@
     ],
     "correctAnswer": "Внутренний класс, который объявляется без указания имени класса"
   },
-
+  {
+    "question": "Как обозначается побитовое логическое отрицание?",
+    "options": [
+      "~",
+      "!",
+      "-"
+    ],
+    "correctAnswer": "~"
+  },
   {
     "question": "Какое ключевое слово не используется для работы с исключениями?",
     "options": [
@@ -72,7 +89,15 @@
     ],
     "correctAnswer": "r, rw, rws, rwd"
   },
-
+  {
+    "question": "В каком пакете сосредоточен основной функционал работы с потоками?",
+    "options": [
+      "java.io",
+      "java.line",
+      "java.thread"
+    ],
+    "correctAnswer": "java.io"
+  },
   {
     "question": "Как называется процесс сохранения состояния объекта в последовательность байт?",
     "options": [
@@ -83,6 +108,15 @@
     "correctAnswer": "Сериализация"
   },
   {
+    "question": "Каким методом можно перевернуть строку?",
+    "options": [
+      "string.reverse();",
+      "stringBuilder.reverse();",
+      "string.return();"
+    ],
+    "correctAnswer": "stringBuilder.reverse();"
+  },
+  {
     "question": "В каком состоянии не может пребывать поток?",
     "options": [
       "TERMINATED",
@@ -91,7 +125,15 @@
     ],
     "correctAnswer": "PAUSED"
   },
-
+  {
+    "question": "Какой метод переводит поток в режим ожидания?",
+    "options": [
+      "wait()",
+      "stop()",
+      "pause()"
+    ],
+    "correctAnswer": "wait()"
+  },
   {
     "question": "Какая аннотация используется при переопределении метода?",
     "options": [

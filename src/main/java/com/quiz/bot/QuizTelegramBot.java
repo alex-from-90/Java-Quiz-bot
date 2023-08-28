@@ -209,13 +209,7 @@ public class QuizTelegramBot extends TelegramLongPollingBot implements BotComman
     private void sendCorrectAnswerAndNextQuestion(long chatId) {
         PollData[] polls = pollReader.readPolls();
         if (polls != null && currentQuestionIndex < polls.length) {
-            PollData pollData = polls[currentQuestionIndex];
-            String correctAnswer = pollData.getCorrectAnswer();
-
-            SendMessage correctAnswerMessage = new SendMessage();
-            correctAnswerMessage.setChatId(chatId);
-            correctAnswerMessage.setText("Правильный ответ был:\n ||" + correctAnswer + "||");
-            correctAnswerMessage.setParseMode("MarkdownV2");
+            SendMessage correctAnswerMessage = getSendMessage(chatId, polls);
 
             try {
                 execute(correctAnswerMessage);
@@ -235,6 +229,26 @@ public class QuizTelegramBot extends TelegramLongPollingBot implements BotComman
                 log.error(e.getMessage());
             }
         }
+    }
+
+    private SendMessage getSendMessage(long chatId, PollData[] polls) {
+        PollData pollData = polls[currentQuestionIndex];
+        String correctAnswer = pollData.getCorrectAnswer();
+
+        SendMessage correctAnswerMessage = new SendMessage();
+        correctAnswerMessage.setChatId(chatId);
+
+        // Экранирование специальных символов в правильном ответе
+        String escapedCorrectAnswer = correctAnswer
+                .replace("|", "\\|")
+                .replace(".", "\\.")
+                .replace("~", "\\~")
+                .replace("(", "\\(")
+                .replace(")", "\\)");
+
+        correctAnswerMessage.setText("Правильный ответ был:\n ||" + escapedCorrectAnswer + "||");
+        correctAnswerMessage.setParseMode("MarkdownV2");
+        return correctAnswerMessage;
     }
 
     private static SendMessage getSendMessage(long chatId) {
