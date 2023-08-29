@@ -74,12 +74,13 @@ public class QuizTelegramBot extends TelegramLongPollingBot implements BotComman
 
     private void handleInactive(Update update) {
         if (update.hasMessage() && update.getMessage().hasText()) {
-            String receivedMessage = update.getMessage().getText().toLowerCase();
+            String originalReceivedMessage = update.getMessage().getText();
+            String receivedMessage = originalReceivedMessage.toLowerCase();
             String botName = getBotUsername().toLowerCase();
 
             if (receivedMessage.equals("/start") || receivedMessage.equals("/start@" + botName)) {
-                isActive = true; // Активируем бота
-                sendPoll(update.getMessage().getChatId()); // Отправляем опрос в чат
+                isActive = true; // Активация бота
+                sendPoll(update.getMessage().getChatId()); // Отправка опроса
             }
         }
     }
@@ -98,13 +99,20 @@ public class QuizTelegramBot extends TelegramLongPollingBot implements BotComman
         if (receivedMessage.equals("/start") || receivedMessage.equals("/start@" + botName)) {
             currentQuestionIndex = 0;
             sendPoll(chatId);
+            log.info("Бот запущен для пользователя: " + message.getFrom().getFirstName());
         } else if (receivedMessage.equals("/help") || receivedMessage.equals("/help@" + botName)) {
             sendHelpText(chatId);
+            log.info("Отправлена справка пользователю: " + message.getFrom().getFirstName());
+
         } else if (receivedMessage.equals("/exit") || receivedMessage.equals("/exit@" + botName)) {
             isActive = false;
             sendExitMessage(chatId);
+            log.info("Пользователь " + message.getFrom().getFirstName() + " вышел из режима бота");
+
         } else if (receivedMessage.equals("/next")) { // Check for /next command
             sendCorrectAnswerAndNextQuestion(chatId);
+            log.info("Пользователь " + message.getFrom().getFirstName() + " нажал кнопку '/next'");
+
         } else {
             // Handle other commands or messages
         }
@@ -119,12 +127,14 @@ public class QuizTelegramBot extends TelegramLongPollingBot implements BotComman
         if (callbackQuery.getMessage().getReplyToMessage() != null) {
             replyUserName = callbackQuery.getMessage().getReplyToMessage().getFrom().getFirstName(); // Получаем имя отправителя оригинального сообщения, на которое дан ответ
         }
-
+        log.info("Обработка callback query от пользователя: " + userName);
         botAnswerUtils(receivedMessage, chatId, userName, callbackQuery.getMessage().getMessageId(), replyUserName); // Вызываем вспомогательный метод для обработки ответа
 
         if ("/next".equals(receivedMessage)) {
             sendCorrectAnswerAndNextQuestion(chatId); // Если получен ответ "/next", отправляем следующий вопрос и правильный ответ
+            log.info("Пользователь " + userName + " нажал кнопку '/next'");
         }
+        log.info("Обработка callback query от пользователя " + userName + " завершена");
     }
 
     private void botAnswerUtils(String receivedMessage, long chatId, String userName, long messageId, String replyUserName) {
@@ -133,10 +143,13 @@ public class QuizTelegramBot extends TelegramLongPollingBot implements BotComman
         // Проверяем, содержит ли receivedMessage имя бота (в нижнем регистре)
         if (receivedMessage.equals("/start") || receivedMessage.equals("/start@" + botName)) {
             startBot(chatId, userName);
+            log.info("Бот запущен для пользователя: " + userName);
         } else if (receivedMessage.equals("/help") || receivedMessage.equals("/help@" + botName)) {
             sendHelpText(chatId);
+            log.info("Отправлена справка пользователю: " + userName);
         } else if (receivedMessage.equals("/exit") || receivedMessage.equals("/exit@" + botName)) {
             sendExitMessage(chatId);
+            log.info("Пользователь " + userName + " вышел из режима");
         }
 
     }
@@ -149,7 +162,7 @@ public class QuizTelegramBot extends TelegramLongPollingBot implements BotComman
 
         try {
             execute(message); // Отправляем сообщение
-            log.info("Reply sent"); // Логируем успешную отправку
+            log.info("Бот запущен. Ответ отправлен"); // Логируем успешную отправку
         } catch (TelegramApiException e) {
             log.error(e.getMessage()); // В случае ошибки выводим сообщение об ошибке в лог
         }
@@ -182,12 +195,12 @@ public class QuizTelegramBot extends TelegramLongPollingBot implements BotComman
 
             try {
                 Message message = execute(poll); // Отправляем опрос
-                log.info("Poll sent with message ID: " + message.getMessageId());
+                log.info("Отправлен опрос с ID сообщения: ID: " + message.getMessageId());
             } catch (TelegramApiException e) {
                 log.error(e.getMessage());
             }
         } else {
-            log.error("No polls found or an error occurred while reading polls from JSON.");
+            log.error("Опросы не найдены или произошла ошибка при чтении опросов из JSON.");
             currentQuestionIndex = 0; // Сбрасываем индекс вопроса, если больше нет доступных опросов
         }
     }
@@ -200,7 +213,7 @@ public class QuizTelegramBot extends TelegramLongPollingBot implements BotComman
 
         try {
             execute(message); // Отправляем сообщение
-            log.info("Reply sent"); // Логируем успешную отправку
+            log.info("Отправлен ответ"); // Логируем успешную отправку
         } catch (TelegramApiException e) {
             log.error(e.getMessage()); // В случае ошибки выводим сообщение об ошибке в лог
         }
@@ -231,23 +244,27 @@ public class QuizTelegramBot extends TelegramLongPollingBot implements BotComman
         }
     }
 
+    private String escapeSpecialCharacters(String input) {
+        String[] specialCharacters = {"|", ".", "~", "(", ")", "'"}; // Добавьте другие символы при необходимости
+
+        for (String character : specialCharacters) {
+            input = input.replace(character, "\\" + character);
+        }
+
+        return input;
+    }
+
     private SendMessage getSendMessage(long chatId, PollData[] polls) {
         PollData pollData = polls[currentQuestionIndex];
         String correctAnswer = pollData.getCorrectAnswer();
 
+        String escapedCorrectAnswer = escapeSpecialCharacters(correctAnswer);
+
         SendMessage correctAnswerMessage = new SendMessage();
         correctAnswerMessage.setChatId(chatId);
-
-        // Экранирование специальных символов в правильном ответе
-        String escapedCorrectAnswer = correctAnswer
-                .replace("|", "\\|")
-                .replace(".", "\\.")
-                .replace("~", "\\~")
-                .replace("(", "\\(")
-                .replace(")", "\\)");
-
         correctAnswerMessage.setText("Правильный ответ был:\n ||" + escapedCorrectAnswer + "||");
         correctAnswerMessage.setParseMode("MarkdownV2");
+
         return correctAnswerMessage;
     }
 
@@ -275,6 +292,7 @@ public class QuizTelegramBot extends TelegramLongPollingBot implements BotComman
             execute(exitMessage); // Отправляем сообщение
             isActive = false; // Деактивируем бота после отправки сообщения
             currentQuestionIndex = 0; // Сбрасываем индекс вопроса, когда вопросы закончились
+            log.info("Пользователь вышел из режима бота");
         } catch (TelegramApiException e) {
             log.error(e.getMessage()); // В случае ошибки выводим сообщение об ошибке в лог
         }
