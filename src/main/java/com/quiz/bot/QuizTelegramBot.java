@@ -109,12 +109,12 @@ public class QuizTelegramBot extends TelegramLongPollingBot implements BotComman
             sendExitMessage(chatId);
             log.info("Пользователь " + message.getFrom().getFirstName() + " вышел из режима бота");
 
-        } else if (receivedMessage.equals("/next")) { // Check for /next command
+        } else if (receivedMessage.equals("/next")) {
             sendCorrectAnswerAndNextQuestion(chatId);
             log.info("Пользователь " + message.getFrom().getFirstName() + " нажал кнопку '/next'");
 
         } else {
-            // Handle other commands or messages
+
         }
     }
 
