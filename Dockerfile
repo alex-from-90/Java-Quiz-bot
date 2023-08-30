@@ -1,3 +1,11 @@
+# Используйте образ на основе Amazon Corretto 17
 FROM amazoncorretto:17
+
+# Устанавливаем рабочую директорию
+WORKDIR /app
+
+# Копируем JAR файл в контейнер
 COPY target/*.jar app.jar
-ENTRYPOINT ["java", "-jar", "app.jar"]
+
+# Определяем команду для запуска JAR файла
+CMD ["java", "-jar", "app.jar"]
