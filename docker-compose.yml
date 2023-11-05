@@ -7,4 +7,4 @@ services:
     image: quiz-chat-bot
     container_name: quiz-chat-bot
     ports:
-      - "8090:8090"
+      - "8091:8091"
