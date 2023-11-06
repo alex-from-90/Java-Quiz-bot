@@ -7,7 +7,7 @@ import java.util.List;
 public interface BotCommands {
 
     List<BotCommand> LIST_OF_COMMANDS = List.of(
-            new BotCommand("/start" , "Запуск бота"),
+            new BotCommand("/start", "Запуск бота"),
             new BotCommand("/help", "Информация"),
             new BotCommand("/next", "Следующий вопрос"),
             new BotCommand("/exit", "Выход")
@@ -19,4 +19,6 @@ public interface BotCommands {
             "/next - Следующий вопрос\n" +
             "/help - Помощь\n" +
             "/exit - Выход";
+
+
 }
