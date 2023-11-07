@@ -140,7 +140,7 @@ escapeSpecialCharacters</pre>
 </details>
 
 # Контакты
-Пожелания и предложения принимаются в группе телеграмм или на почту
-https://t.me/java_yandex_practicum (Алексей - N911)
+Пожелания и предложения принимаются в группе телеграмм или на почту:<br><br>
+https://t.me/java_yandex_practicum (Алексей - N911)<br>
 
 freelance@site-n.ru
