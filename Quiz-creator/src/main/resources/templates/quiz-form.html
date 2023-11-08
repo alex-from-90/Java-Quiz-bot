@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Quiz Form</title>
+</head>
+<body>
+<h2>Добавить новый вопрос</h2>
+<form th:object="${question}" method="post" th:action="@{/quiz}">
+    <div>
+        <label>Вопрос:</label>
+        <input type="text" th:field="*{question}" required/>
+    </div>
+    <div>
+        <label>Варианты ответов:</label>
+        <input type="text" th:field="*{options[0]}" required/>
+        <input type="text" th:field="*{options[1]}" required/>
+        <input type="text" th:field="*{options[2]}"/>
+        <input type="text" th:field="*{options[3]}"/>
+    </div>
+    <div>
+        <label>Правильный ответ:</label>
+        <input type="text" th:field="*{correctAnswer}" required/>
+    </div>
+    <div>
+        <input type="submit" value="Добавить вопрос"/>
+    </div>
+</form>
+<a href="/quiz/generate-json">Создать JSON</a>
+</body>
+</html>

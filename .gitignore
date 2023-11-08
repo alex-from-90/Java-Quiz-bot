@@ -38,5 +38,5 @@ build/
 /.mvn/
 /mvnw
 /mvnw.cmd
-/src/main/resources/META-INF/
-/src/main/resources/config.properties
+/Quiz-bot/src/main/resources/META-INF/
+/Quiz-bot/src/main/resources/config.properties

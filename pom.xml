@@ -11,8 +11,13 @@
     <groupId>com.project</groupId>
     <artifactId>SpringTgBot</artifactId>
     <version>0.0.1-SNAPSHOT</version>
+    <packaging>pom</packaging>
     <name>SpringTgBot</name>
     <description>Telegram bot</description>
+    <modules>
+        <module>Quiz-creator</module>
+        <module>Quiz-bot</module>
+    </modules>
     <properties>
         <java.version>17</java.version>
     </properties>

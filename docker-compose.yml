@@ -3,7 +3,7 @@ services:
   quiz-chat-bot:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Quiz-bot/Dockerfile
     image: quiz-chat-bot
     container_name: quiz-chat-bot
     ports:
