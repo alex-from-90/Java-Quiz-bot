@@ -29,6 +29,13 @@
             <artifactId>jackson-databind</artifactId>
         </dependency>
 
+            <!-- Другие зависимости вашего проекта -->
+            <dependency>
+                <groupId>log4j</groupId>
+                <artifactId>log4j</artifactId>
+                <version>1.2.17</version>
+            </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-thymeleaf</artifactId>
@@ -38,6 +45,31 @@
             <artifactId>j2html</artifactId>
             <version>1.6.0</version>
         </dependency>
+
+        <!-- Place the below in the <dependencies> section of your pom.xml -->
+        <dependency>
+            <groupId>com.j2html</groupId>
+            <artifactId>j2html</artifactId>
+            <version>1.6.0</version>
+        </dependency>
+        <dependency>
+            <groupId>io.javalin</groupId>
+            <artifactId>javalin</artifactId>
+            <version>5.5.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.webjars.npm</groupId>
+            <artifactId>htmx.org</artifactId>
+            <version>1.9.2</version>
+        </dependency>
+        <!-- Defining a logger as Javalin will complain if there is no SL4J logger -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>2.0.5</version>
+        </dependency>
+
+
     </dependencies>
 
 </project>

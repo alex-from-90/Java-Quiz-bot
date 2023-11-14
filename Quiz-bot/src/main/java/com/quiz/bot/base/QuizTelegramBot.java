@@ -1,9 +1,11 @@
-package com.quiz.bot;
+package com.quiz.bot.base;
 
 
 import com.quiz.bot.components.BotCommands;
 import com.quiz.bot.components.Buttons;
 import com.quiz.bot.coonfig.BotConfig;
+import com.quiz.bot.poll.PollData;
+import com.quiz.bot.poll.PollReader;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
