@@ -1,0 +1,9 @@
+[
+  {"question":"кто",
+    "options":[
+      "я",
+      "не я"
+    ],
+    "correctAnswer":"я"},
+
+  {"question":"кто","options":["я","не я","мы","не мы"],"correctAnswer":"я"}]

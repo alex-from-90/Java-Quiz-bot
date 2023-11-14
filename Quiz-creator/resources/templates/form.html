@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Форма для вопросов</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+<h1>Форма для вопросов</h1>
+<form id="questionForm" action="/submit" method="post">
+    <label for="question">Вопрос:</label>
+    <input type="text" id="question" name="question" required><br><br>
+
+    <label for="optionsTextarea">Варианты ответов:</label>
+    <textarea id="optionsTextarea" name="options" rows="4" cols="50" required></textarea><br><br>
+
+    <div id="additionalOptions"></div>
+    <button type="button" id="addOption">Добавить вариант ответа</button><br><br>
+
+    <label for="correctAnswer">Правильный ответ:</label>
+    <input type="text" id="correctAnswer" name="correctAnswer" required><br><br>
+
+    <input type="submit" value="Создать вопрос">
+</form>
+
+<script>
+    $(document).ready(function() {
+        var formSubmitted = false;
+
+        $('#addOption').click(function() {
+            $('#additionalOptions').append('<textarea class="option" name="options[]" rows="4" cols="50" required></textarea><br><br>');
+        });
+
+        $('#questionForm').submit(function(event) {
+            if (!formSubmitted) {
+                event.preventDefault();
+
+                var formData = $('#questionForm').serializeArray();
+
+                var options = $('.option');
+                var addedOptions = [];
+
+                for (var i = 0; i < options.length; i++) {
+                    var optionValue = $(options[i]).val();
+                    if (!addedOptions.includes(optionValue)) {
+                        formData.push({ name: 'options', value: optionValue });
+                        addedOptions.push(optionValue);
+                    }
+                }
+
+                formSubmitted = true;
+
+                $.ajax({
+                    type: 'POST',
+                    url: '/submit',
+                    data: formData,
+                    success: function(response) {
+                        console.log(response);
+                    },
+                    error: function(error) {
+                        console.error(error);
+                    },
+                    complete: function() {
+                        formSubmitted = false;
+                    }
+                });
+            }
+        });
+    });
+</script>
+
+
+
+
+
+
+</body>
+</html>
