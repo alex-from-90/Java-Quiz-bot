@@ -1,7 +1,7 @@
 package com.quiz.bot.coonfig;
 
 
-import com.quiz.bot.QuizTelegramBot;
+import com.quiz.bot.bot.QuizTelegramBot;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.ContextRefreshedEvent;

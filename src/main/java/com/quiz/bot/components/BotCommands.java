@@ -13,12 +13,16 @@ public interface BotCommands {
             new BotCommand("/exit", "Выход")
     );
 
-    String HELP_TEXT = "Этот бот написан на SpringBot. " +
+    String HELP_TEXT = "Этот бот написан на SpringBoot. " +
             "Для общения используйте команды:\n\n" +
             "/start - Запустить бота\n" +
             "/next - Следующий вопрос\n" +
             "/help - Помощь\n" +
-            "/exit - Выход";
+            "/exit - Выход\n"+
+            "Присоединится к разработке\n"+
+            "@Site_n_ru\n" +
+            "Угостить меня кофе ;)\n" +
+            "https://pay.cloudtips.ru/p/bb25a417";
 
 
 }

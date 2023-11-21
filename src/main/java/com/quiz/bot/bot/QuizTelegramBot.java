@@ -1,8 +1,10 @@
-package com.quiz.bot;
+package com.quiz.bot.bot;
 
 import com.quiz.bot.components.BotCommands;
 import com.quiz.bot.components.Buttons;
 import com.quiz.bot.coonfig.BotConfig;
+import com.quiz.bot.polls.PollData;
+import com.quiz.bot.polls.PollReader;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
@@ -26,24 +28,27 @@ import java.util.List;
 @Component
 public class QuizTelegramBot extends TelegramLongPollingBot implements BotCommands {
 
-    final BotConfig config;
+    private final BotConfig config;
     private final InlineKeyboardMarkup keyboardMarkup = Buttons.inlineMarkup();
-    private final PollReader pollReader = new PollReader();
+
+    private final PollReader pollReader; // Поле класса для PollReader
     private int currentQuestionIndex = 0;
     private final Integer threadId;
-
     private boolean isActive = true;
 
+
     public QuizTelegramBot(BotConfig config) {
-        this.config = config; // Присваиваем переданную конфигурацию полю класса
+        this.config = config;
         this.threadId = config.getMessageThreadId();
+        this.pollReader = new PollReader(config.getBotQuizUrl());
+
         try {
-            // Попытка выполнить команду SetMyCommands с переданным списком команд и настройками по умолчанию
             this.execute(new SetMyCommands(LIST_OF_COMMANDS, new BotCommandScopeDefault(), null));
         } catch (TelegramApiException e) {
-            log.error(e.getMessage()); // В случае ошибки выводим сообщение об ошибке в лог
+            log.error(e.getMessage());
         }
     }
+
 
     @Override
     public String getBotUsername() {
@@ -54,6 +59,7 @@ public class QuizTelegramBot extends TelegramLongPollingBot implements BotComman
     public String getBotToken() {
         return config.getToken();
     }
+
 
     @Override
     public void onUpdateReceived(Update update) {
@@ -133,7 +139,9 @@ public class QuizTelegramBot extends TelegramLongPollingBot implements BotComman
 
     private void handleCallbackQuery(CallbackQuery callbackQuery) {
         long chatId = callbackQuery.getMessage().getChatId();
-        int threadId = callbackQuery.getMessage().getMessageThreadId();
+        Integer threadIdInteger = callbackQuery.getMessage().getMessageThreadId();
+        int threadId = (threadIdInteger != null) ? threadIdInteger : 0; // Проверка на null и преобразование в int
+
         String receivedMessage = callbackQuery.getData();
         String userName = callbackQuery.getFrom().getFirstName();
         String replyUserName = null;
@@ -141,13 +149,16 @@ public class QuizTelegramBot extends TelegramLongPollingBot implements BotComman
         if (callbackQuery.getMessage().getReplyToMessage() != null) {
             replyUserName = callbackQuery.getMessage().getReplyToMessage().getFrom().getFirstName();
         }
+
         log.info("Обработка callback query от пользователя: " + userName);
+
         botAnswerUtils(receivedMessage, chatId, threadId, userName, callbackQuery.getMessage().getMessageId(), replyUserName);
 
         if ("/next".equals(receivedMessage)) {
             sendCorrectAnswerAndNextQuestion(chatId, threadId);
             log.info("Пользователь " + userName + " нажал кнопку '/next'");
         }
+
         log.info("Обработка callback query от пользователя " + userName + " завершена");
     }
 
@@ -236,7 +247,7 @@ public class QuizTelegramBot extends TelegramLongPollingBot implements BotComman
         row1.add(exitButton);
 
         // Если есть ещё вопросы, создаем кнопку "Следующий вопрос" и устанавливаем для неё callback-данные "/next" во второй строке
-        if (currentQuestionIndex < polls.length - 1) {
+        if (currentQuestionIndex <= polls.length) {
             InlineKeyboardButton nextButton = new InlineKeyboardButton();
             nextButton.setText("Следующий вопрос");
             nextButton.setCallbackData("/next");
@@ -270,7 +281,7 @@ public class QuizTelegramBot extends TelegramLongPollingBot implements BotComman
     private void sendCorrectAnswerAndNextQuestion(long chatId, int threadId) {
         PollData[] polls = pollReader.readPolls();
         if (polls != null && currentQuestionIndex < polls.length) {
-            SendMessage correctAnswerMessage = getSendMessage(chatId,threadId, polls);
+            SendMessage correctAnswerMessage = getSendMessage(chatId, threadId, polls);
 
             try {
                 execute(correctAnswerMessage);
@@ -279,11 +290,11 @@ public class QuizTelegramBot extends TelegramLongPollingBot implements BotComman
                     currentQuestionIndex++;
                     sendPoll(chatId, threadId); // Отправляем следующий вопрос
                 } else {
-                    // Достигнут последний вопрос, убираем все кнопки и деактивируем бота
-                    SendMessage lastQuestionMessage = getSendMessage(chatId, threadId);
+                    // Достигнут последний вопрос, отправляем сообщение с правильным ответом и деактивируем бота
+                    SendMessage lastQuestionMessage = getLastQuestionMessage(chatId, threadId);
+                    execute(lastQuestionMessage); // Отправляем сообщение о последнем вопросе
 
                     isActive = false; // Деактивируем бота после отправки финального сообщения
-                    execute(lastQuestionMessage); // Отправляем сообщение с убранными кнопками
                     currentQuestionIndex = 0; // Сбрасываем индекс вопроса, когда вопросы закончились
                 }
             } catch (TelegramApiException e) {
@@ -293,7 +304,8 @@ public class QuizTelegramBot extends TelegramLongPollingBot implements BotComman
     }
 
     private String escapeSpecialCharacters(String input) {
-        String[] specialCharacters = {"|", ".", "~", "(", ")", "'"}; // Добавьте другие символы при необходимости
+         String[] specialCharacters = {"|", ".", "~", "(", ")", "'", ";", ",", "#", "@", "&", "%","-","$","&"}; // Добавьте другие символы при необходимости
+
 
         for (String character : specialCharacters) {
             input = input.replace(character, "\\" + character);
@@ -317,14 +329,14 @@ public class QuizTelegramBot extends TelegramLongPollingBot implements BotComman
         return correctAnswerMessage;
     }
 
-    private static SendMessage getSendMessage(long chatId, int threadId) {
+    private static SendMessage getLastQuestionMessage(long chatId, int threadId) {
         ReplyKeyboardRemove keyboardRemove = new ReplyKeyboardRemove();
         keyboardRemove.setRemoveKeyboard(true);
 
         SendMessage lastQuestionMessage = new SendMessage();
         lastQuestionMessage.setChatId(chatId);
         lastQuestionMessage.setMessageThreadId(threadId);
-        lastQuestionMessage.setText("Это был последний вопрос. Бот уходит в режим ожидания. Нажмите /start, чтобы начать заново.");
+        lastQuestionMessage.setText("Это был последний вопрос. Бот уходит в режим ожидания. Нажмите /start, чтобы начать заново.\nЕсли вам понравился бот, \nвы всегда можете поддержать автора \nи угостить разработчика кофе ;) \nhttps://pay.cloudtips.ru/p/bb25a417");
         lastQuestionMessage.setReplyMarkup(keyboardRemove);
         return lastQuestionMessage;
     }
@@ -333,7 +345,14 @@ public class QuizTelegramBot extends TelegramLongPollingBot implements BotComman
         SendMessage exitMessage = new SendMessage();
         exitMessage.setChatId(chatId);
         exitMessage.setMessageThreadId(threadId);
-        exitMessage.setText("Вы вышли из режима. Для продолжения нажмите /start.");
+
+        String messageText = "Вы вышли из режима. Для продолжения нажмите /start.\n" +
+                "Если вам понравился бот, вы всегда можете поддержать автора ";
+
+        String coffeeLink = "https://pay.cloudtips.ru/p/bb25a417";
+        String coffeeLinkText = "Угостить разработчика кофе";
+
+        exitMessage.setText(messageText + "[" + coffeeLinkText + "](" + coffeeLink + ")");
 
         ReplyKeyboardRemove keyboardRemove = new ReplyKeyboardRemove();
         keyboardRemove.setRemoveKeyboard(true);
@@ -348,4 +367,5 @@ public class QuizTelegramBot extends TelegramLongPollingBot implements BotComman
             log.error(e.getMessage()); // В случае ошибки выводим сообщение об ошибке в лог
         }
     }
+
 }
