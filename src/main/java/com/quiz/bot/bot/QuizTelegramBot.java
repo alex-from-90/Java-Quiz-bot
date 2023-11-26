@@ -265,7 +265,7 @@ public class QuizTelegramBot extends TelegramLongPollingBot implements BotComman
     }
 
     private void getLastQuestionMessage(long chatId, int threadId) {
-        String exitMessageText = BotMessages.EXIT_TEXT;
+        String exitMessageText = BotMessages.LAST_QUESTION_TEXT;
         sendMessageToChat(chatId, threadId, exitMessageText, true);
         stopActive();
     }
