@@ -1,6 +1,7 @@
 package com.quiz.bot.bot;
 
 import com.quiz.bot.components.BotCommands;
+import com.quiz.bot.components.BotMessages;
 import com.quiz.bot.components.Buttons;
 import com.quiz.bot.coonfig.BotConfig;
 import com.quiz.bot.polls.PollData;
@@ -14,15 +15,13 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
 import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardRemove;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 
 @Slf4j
 @Component
@@ -33,15 +32,15 @@ public class QuizTelegramBot extends TelegramLongPollingBot implements BotComman
 
     private final PollReader pollReader; // Поле класса для PollReader
     private int currentQuestionIndex = 0;
-    private final Integer threadId;
+    private Integer threadId;
     private boolean isActive = true;
 
 
     public QuizTelegramBot(BotConfig config) {
+        super(config.getToken());
         this.config = config;
         this.threadId = config.getMessageThreadId();
         this.pollReader = new PollReader(config.getBotQuizUrl());
-
         try {
             this.execute(new SetMyCommands(LIST_OF_COMMANDS, new BotCommandScopeDefault(), null));
         } catch (TelegramApiException e) {
@@ -49,17 +48,10 @@ public class QuizTelegramBot extends TelegramLongPollingBot implements BotComman
         }
     }
 
-
     @Override
     public String getBotUsername() {
         return config.getBotName();
     }
-
-    @Override
-    public String getBotToken() {
-        return config.getToken();
-    }
-
 
     @Override
     public void onUpdateReceived(Update update) {
@@ -80,12 +72,32 @@ public class QuizTelegramBot extends TelegramLongPollingBot implements BotComman
             String originalReceivedMessage = update.getMessage().getText();
             String receivedMessage = originalReceivedMessage.toLowerCase();
             String botName = getBotUsername().toLowerCase();
+            String userName = update.getMessage().getFrom().getFirstName(); // Получение имени пользователя из сообщения
+            currentQuestionIndex = 0;
+
+            long chatId = update.getMessage().getChatId(); // Получаем chatId из объекта Update
 
             if (receivedMessage.equals("/start") || receivedMessage.equals("/start@" + botName)) {
                 isActive = true; // Активация бота
-                sendPoll(update.getMessage().getChatId(), threadId); // Отправка опроса
+                if (update.getMessage().getChat().isUserChat()) {
+                    threadId = 0;
+                }
+
+                startBot(chatId, threadId, userName);
+
+                sendPoll(chatId, threadId); // Отправка опроса
+            } else {
+                String sleepMessage = BotMessages.SLEEP_MESSAGE;
+                sendMessageToChat(chatId, threadId, sleepMessage, false);
             }
         }
+    }
+
+    private void startBot(long chatId, int threadId, String userName) {
+        String startMessage = String.format(BotMessages.START_MESSAGE, userName);
+
+        sendMessageToChat(chatId, threadId, startMessage, false);
+        log.info("Бот запущен. Ответ отправлен");
     }
 
     private void handleTextMessage(Message message) {
@@ -97,42 +109,60 @@ public class QuizTelegramBot extends TelegramLongPollingBot implements BotComman
         long chatId = message.getChatId();
         Integer threadId = message.getMessageThreadId();
         if (threadId == null) {
-            threadId = config.getMessageThreadId();
+            threadId = 0;
         }
         String receivedMessage = message.getText();
-        if (receivedMessage == null) {
-            log.error("Переданное сообщение не содержит текст.");
-            return;
-        }
-
         receivedMessage = receivedMessage.toLowerCase();
 
-        String botName = getBotUsername();
-        if (botName == null) {
-            log.error("Пустое имя бота.");
+        processCommandFromMessage(message, chatId, threadId, receivedMessage);
+    }
+
+    private void processCommandFromMessage(Message message, long chatId, Integer threadId, String receivedMessage) {
+        String botName = getBotUsername().toLowerCase();
+        if (isActive && receivedMessage.equals("/start") || receivedMessage.equals("/start@" + botName)) {
+            sendMessageToChat(chatId, threadId, BotMessages.IN_USE_TEXT, false);
+        }
+        for (BotCommand command : LIST_OF_COMMANDS) {
+            if (receivedMessage.equals(command.getCommand()) || receivedMessage.equals(command.getCommand() + "@" + botName)) {
+                handleCommand(command.getCommand(), chatId, threadId, message.getFrom().getFirstName());
+                return;
+            }
+        }
+    }
+
+
+    private void botAnswerUtils(String receivedMessage, long chatId, int threadId, Message message) {
+        if (message == null) {
+            log.error("Передано пустое сообщение.");
             return;
         }
 
-        botName = botName.toLowerCase();
+        processCommandFromMessage(message, chatId, threadId, receivedMessage);
+    }
 
-        if (message.getReplyToMessage() != null) {
-            message.getReplyToMessage().getFrom().getFirstName();
-        }
+    private void handleCommand(String command, long chatId, int threadId, String userName) {
 
-        if (receivedMessage.equals("/start") || receivedMessage.equals("/start@" + botName)) {
-            currentQuestionIndex = 0;
-            sendPoll(chatId, threadId);
-            log.info("Бот запущен для пользователя: " + message.getFrom().getFirstName());
-        } else if (receivedMessage.equals("/help") || receivedMessage.equals("/help@" + botName)) {
-            sendHelpText(chatId, threadId);
-            log.info("Отправлена справка пользователю: " + message.getFrom().getFirstName());
-        } else if (receivedMessage.equals("/exit") || receivedMessage.equals("/exit@" + botName)) {
-            isActive = false;
-            sendExitMessage(chatId,threadId);
-            log.info("Пользователь " + message.getFrom().getFirstName() + " вышел из режима бота");
-        } else if (receivedMessage.equals("/next") || receivedMessage.equals("/next@" + botName)) {
-            sendCorrectAnswerAndNextQuestion(chatId, threadId);
-            log.info("Пользователь " + message.getFrom().getFirstName() + " нажал кнопку '/next'");
+        switch (command) {
+            case "/restart":
+                currentQuestionIndex = 0;
+                sendPoll(chatId, threadId);
+                log.info("Отправлена команда перезапуска вопросов пользователю: " + userName);
+                break;
+            case "/help":
+                sendHelpText(chatId, threadId);
+                log.info("Отправлена справка пользователю: " + userName);
+                break;
+            case "/exit":
+                isActive = false;
+                sendExitMessage(chatId, threadId);
+                log.info("Пользователь " + userName + " вышел из режима бота");
+                break;
+            case "/next":
+                sendCorrectAnswerAndNextQuestion(chatId, threadId);
+                log.info("Пользователь " + userName + " ввел команду '/next'");
+                break;
+            default:
+                break;
         }
     }
 
@@ -144,62 +174,25 @@ public class QuizTelegramBot extends TelegramLongPollingBot implements BotComman
 
         String receivedMessage = callbackQuery.getData();
         String userName = callbackQuery.getFrom().getFirstName();
-        String replyUserName = null;
 
         if (callbackQuery.getMessage().getReplyToMessage() != null) {
-            replyUserName = callbackQuery.getMessage().getReplyToMessage().getFrom().getFirstName();
+            callbackQuery.getMessage().getReplyToMessage().getFrom().getFirstName();
         }
 
         log.info("Обработка callback query от пользователя: " + userName);
 
-        botAnswerUtils(receivedMessage, chatId, threadId, userName, callbackQuery.getMessage().getMessageId(), replyUserName);
-
-        if ("/next".equals(receivedMessage)) {
-            sendCorrectAnswerAndNextQuestion(chatId, threadId);
-            log.info("Пользователь " + userName + " нажал кнопку '/next'");
-        }
+        botAnswerUtils(receivedMessage, chatId, threadId, callbackQuery.getMessage());
 
         log.info("Обработка callback query от пользователя " + userName + " завершена");
     }
 
-    private void botAnswerUtils(String receivedMessage, long chatId, int threadId, String userName, long messageId, String replyUserName) {
-        String botName = getBotUsername().toLowerCase();
-
-        // Проверяем, содержит ли receivedMessage имя бота (в нижнем регистре)
-        if (receivedMessage.equals("/start") || receivedMessage.equals("/start@" + botName)) {
-            startBot(chatId, threadId, userName);
-            log.info("Бот запущен для пользователя: " + userName);
-        } else if (receivedMessage.equals("/help") || receivedMessage.equals("/help@" + botName)) {
-            sendHelpText(chatId, threadId);
-            log.info("Отправлена справка пользователю: " + userName);
-        } else if (receivedMessage.equals("/exit") || receivedMessage.equals("/exit@" + botName)) {
-            sendExitMessage(chatId, threadId);
-            log.info("Пользователь " + userName + " вышел из режима");
-        }
-
-    }
-
-    private void startBot(long chatId, int threadId, String userName) {
-        SendMessage message = new SendMessage();
-        message.setChatId(chatId);
-        message.setMessageThreadId(threadId);
-        message.setText("Привет, " + userName + "! Я квиз бот.'");
-        message.setReplyMarkup(keyboardMarkup); // Используем предварительно созданный экземпляр клавиатуры
-
-        try {
-            execute(message); // Отправляем сообщение
-            log.info("Бот запущен. Ответ отправлен"); // Логируем успешную отправку
-        } catch (TelegramApiException e) {
-            log.error(e.getMessage()); // В случае ошибки выводим сообщение об ошибке в лог
-        }
-    }
 
     private void sendPoll(long chatId, int threadId) {
         PollData[] polls = pollReader.readPolls();
 
         if (polls != null && polls.length > currentQuestionIndex) {
             PollData pollData = polls[currentQuestionIndex];
-            SendPoll poll = getSendPoll(chatId, threadId, pollData, polls);
+            SendPoll poll = getSendPoll(chatId, threadId, pollData);
 
             try {
                 Message message = execute(poll);
@@ -212,70 +205,16 @@ public class QuizTelegramBot extends TelegramLongPollingBot implements BotComman
             currentQuestionIndex = 0;
         }
     }
+    // Обработка inline keyboard
 
-    private SendPoll getSendPoll(long chatId, int threadId, PollData pollData, PollData[] polls) {
+    private SendPoll getSendPoll(long chatId, int threadId, PollData pollData) {
         SendPoll poll = new SendPoll();
         poll.setChatId(chatId);
         poll.setMessageThreadId(threadId);
         poll.setQuestion(pollData.getQuestion());
         poll.setOptions(Arrays.asList(pollData.getOptions()));
-
-        InlineKeyboardMarkup markup = new InlineKeyboardMarkup(); // Изменили тип клавиатуры
-
-        List<List<InlineKeyboardButton>> keyboard = getLists(polls);
-        markup.setKeyboard(keyboard);
-
-        poll.setReplyMarkup(markup);
+        poll.setReplyMarkup(keyboardMarkup); // Используем поле keyboardMarkup в качестве клавиатуры
         return poll;
-    }
-
-    private List<List<InlineKeyboardButton>> getLists(PollData[] polls) {
-        List<List<InlineKeyboardButton>> keyboard = new ArrayList<>();
-        List<InlineKeyboardButton> row1 = new ArrayList<>();
-        List<InlineKeyboardButton> row2 = new ArrayList<>();
-
-        // Создаем инлайн кнопку "Помощь" с callback-данными "/help" и добавляем её в первую строку
-        InlineKeyboardButton helpButton = new InlineKeyboardButton();
-        helpButton.setText("Помощь");
-        helpButton.setCallbackData("/help");
-        row1.add(helpButton);
-
-        // Создаем инлайн кнопку "Выход" с callback-данными "/exit" и добавляем её в первую строку
-        InlineKeyboardButton exitButton = new InlineKeyboardButton();
-        exitButton.setText("Выход");
-        exitButton.setCallbackData("/exit");
-        row1.add(exitButton);
-
-        // Если есть ещё вопросы, создаем кнопку "Следующий вопрос" и устанавливаем для неё callback-данные "/next" во второй строке
-        if (currentQuestionIndex <= polls.length) {
-            InlineKeyboardButton nextButton = new InlineKeyboardButton();
-            nextButton.setText("Следующий вопрос");
-            nextButton.setCallbackData("/next");
-            row2.add(nextButton);
-        }
-
-        // Добавляем обе строки в клавиатуру
-        keyboard.add(row1);
-        keyboard.add(row2);
-
-        return keyboard;
-    }
-
-
-
-
-    private void sendHelpText(long chatId, int threadId) {
-        SendMessage message = new SendMessage();
-        message.setChatId(chatId);
-        message.setMessageThreadId(threadId);
-        message.setText(BotCommands.HELP_TEXT); // Устанавливаем текст справки из предопределенных констант
-
-        try {
-            execute(message); // Отправляем сообщение
-            log.info("Отправлен ответ"); // Логируем успешную отправку
-        } catch (TelegramApiException e) {
-            log.error(e.getMessage()); // В случае ошибки выводим сообщение об ошибке в лог
-        }
     }
 
     private void sendCorrectAnswerAndNextQuestion(long chatId, int threadId) {
@@ -291,11 +230,7 @@ public class QuizTelegramBot extends TelegramLongPollingBot implements BotComman
                     sendPoll(chatId, threadId); // Отправляем следующий вопрос
                 } else {
                     // Достигнут последний вопрос, отправляем сообщение с правильным ответом и деактивируем бота
-                    SendMessage lastQuestionMessage = getLastQuestionMessage(chatId, threadId);
-                    execute(lastQuestionMessage); // Отправляем сообщение о последнем вопросе
-
-                    isActive = false; // Деактивируем бота после отправки финального сообщения
-                    currentQuestionIndex = 0; // Сбрасываем индекс вопроса, когда вопросы закончились
+                    getLastQuestionMessage(chatId, threadId);
                 }
             } catch (TelegramApiException e) {
                 log.error(e.getMessage());
@@ -304,7 +239,7 @@ public class QuizTelegramBot extends TelegramLongPollingBot implements BotComman
     }
 
     private String escapeSpecialCharacters(String input) {
-         String[] specialCharacters = {"|", ".", "~", "(", ")", "'", ";", ",", "#", "@", "&", "%","-","$","&"}; // Добавьте другие символы при необходимости
+        String[] specialCharacters = {"|", ".", "~", "(", ")", "'", ";", ",", "#", "@", "&", "%", "-", "$", "&"}; // Добавьте другие символы при необходимости
 
 
         for (String character : specialCharacters) {
@@ -329,43 +264,45 @@ public class QuizTelegramBot extends TelegramLongPollingBot implements BotComman
         return correctAnswerMessage;
     }
 
-    private static SendMessage getLastQuestionMessage(long chatId, int threadId) {
-        ReplyKeyboardRemove keyboardRemove = new ReplyKeyboardRemove();
-        keyboardRemove.setRemoveKeyboard(true);
+    private void getLastQuestionMessage(long chatId, int threadId) {
+        String exitMessageText = BotMessages.EXIT_TEXT;
+        sendMessageToChat(chatId, threadId, exitMessageText, true);
+        stopActive();
+    }
 
-        SendMessage lastQuestionMessage = new SendMessage();
-        lastQuestionMessage.setChatId(chatId);
-        lastQuestionMessage.setMessageThreadId(threadId);
-        lastQuestionMessage.setText("Это был последний вопрос. Бот уходит в режим ожидания. Нажмите /start, чтобы начать заново.\nЕсли вам понравился бот, \nвы всегда можете поддержать автора \nи угостить разработчика кофе ;) \nhttps://pay.cloudtips.ru/p/bb25a417");
-        lastQuestionMessage.setReplyMarkup(keyboardRemove);
-        return lastQuestionMessage;
+    private void sendHelpText(long chatId, int threadId) {
+        sendMessageToChat(chatId, threadId, BotMessages.HELP_TEXT, false);
+        log.info("Отправлен ответ"); // Логируем успешную отправку
     }
 
     private void sendExitMessage(long chatId, int threadId) {
-        SendMessage exitMessage = new SendMessage();
-        exitMessage.setChatId(chatId);
-        exitMessage.setMessageThreadId(threadId);
+        String exitMessageText = BotMessages.EXIT_TEXT;
+        sendMessageToChat(chatId, threadId, exitMessageText, true);
+        stopActive();
+    }
 
-        String messageText = "Вы вышли из режима. Для продолжения нажмите /start.\n" +
-                "Если вам понравился бот, вы всегда можете поддержать автора ";
+    private void sendMessageToChat(long chatId, int threadId, String text, boolean removeKeyboard) {
+        SendMessage message = new SendMessage();
+        message.setChatId(chatId);
+        message.setMessageThreadId(threadId);
 
-        String coffeeLink = "https://pay.cloudtips.ru/p/bb25a417";
-        String coffeeLinkText = "Угостить разработчика кофе";
+        message.setText(text);
 
-        exitMessage.setText(messageText + "[" + coffeeLinkText + "](" + coffeeLink + ")");
-
-        ReplyKeyboardRemove keyboardRemove = new ReplyKeyboardRemove();
-        keyboardRemove.setRemoveKeyboard(true);
-        exitMessage.setReplyMarkup(keyboardRemove);
-
+        if (removeKeyboard) {
+            ReplyKeyboardRemove keyboardRemove = new ReplyKeyboardRemove();
+            keyboardRemove.setRemoveKeyboard(true);
+            message.setReplyMarkup(keyboardRemove);
+        }
         try {
-            execute(exitMessage); // Отправляем сообщение
-            isActive = false; // Деактивируем бота после отправки сообщения
-            currentQuestionIndex = 0; // Сбрасываем индекс вопроса, когда вопросы закончились
-            log.info("Пользователь вышел из режима бота");
+            execute(message); // Отправляем сообщение
         } catch (TelegramApiException e) {
             log.error(e.getMessage()); // В случае ошибки выводим сообщение об ошибке в лог
         }
     }
 
+    private void stopActive() {
+        isActive = false; // Деактивируем бота после отправки сообщения
+        currentQuestionIndex = 0; // Сбрасываем индекс вопроса, когда вопросы закончились
+        log.info("Пользователь вышел из режима бота");
+    }
 }

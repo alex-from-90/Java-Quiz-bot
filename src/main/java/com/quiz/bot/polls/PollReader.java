@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.logging.Level;
@@ -31,8 +32,18 @@ public class PollReader {
             return null;
         }
 
-        try (InputStream inputStream = pollFileURL.openStream()) {
-            return objectMapper.readValue(inputStream, PollData[].class);
+        try {
+            HttpURLConnection connection = (HttpURLConnection) pollFileURL.openConnection();
+            connection.setRequestMethod("GET");
+
+            if (connection.getResponseCode() == HttpURLConnection.HTTP_OK) {
+                try (InputStream inputStream = connection.getInputStream()) {
+                    return objectMapper.readValue(inputStream, PollData[].class);
+                }
+            } else {
+                logger.log(Level.SEVERE, "Ошибка при получении файла. Статус ответа: " + connection.getResponseCode());
+                return null;
+            }
         } catch (IOException e) {
             logger.log(Level.SEVERE, "Произошла ошибка при чтении из файла JSON.", e);
             return null;

@@ -10,19 +10,7 @@ public interface BotCommands {
             new BotCommand("/start", "Запуск бота"),
             new BotCommand("/help", "Информация"),
             new BotCommand("/next", "Следующий вопрос"),
-            new BotCommand("/exit", "Выход")
+            new BotCommand("/exit", "Выход"),
+            new BotCommand("/restart", "Перезапуск вопросов")
     );
-
-    String HELP_TEXT = "Этот бот написан на SpringBoot. " +
-            "Для общения используйте команды:\n\n" +
-            "/start - Запустить бота\n" +
-            "/next - Следующий вопрос\n" +
-            "/help - Помощь\n" +
-            "/exit - Выход\n"+
-            "Присоединится к разработке\n"+
-            "@Site_n_ru\n" +
-            "Угостить меня кофе ;)\n" +
-            "https://pay.cloudtips.ru/p/bb25a417";
-
-
 }
