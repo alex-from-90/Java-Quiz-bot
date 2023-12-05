@@ -1,20 +1,21 @@
 [
+    {
+      "question": "Сколько ключевых слов зарезервировано языком?",
+      "options": [
+        "Нисколько",
+        "25",
+        "50"
+      ],
+      "correctAnswer": "50"
+    },
   {
-    "question": "Какой метод используется для вывода текста в консоль?",
-    "options": [
-      "print()",
-      "console.log()",
-      "System.out.println()",
-      "echo()"
-    ],
-    "correctAnswer": "System.out.println()"
-  },
-  {
-    "question": "Второй вопрос:",
-    "options": [
-      "1 ответ",
-      "2 ответ"
-    ],
-    "correctAnswer": "Правильный ответ"
-  }
+      "question": "Какие из зарезервированных слов не используются?",
+      "options": [
+        "goto",
+        "goto, const",
+        "Используются все"
+      ],
+      "correctAnswer": "goto"
+    }
+
 ]

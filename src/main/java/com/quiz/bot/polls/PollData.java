@@ -1,4 +1,4 @@
-package com.quiz.bot;
+package com.quiz.bot.polls;
 
 import lombok.Data;
 
