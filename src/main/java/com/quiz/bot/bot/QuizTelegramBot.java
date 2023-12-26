@@ -72,26 +72,37 @@ public class QuizTelegramBot extends TelegramLongPollingBot implements BotComman
             String originalReceivedMessage = update.getMessage().getText();
             String receivedMessage = originalReceivedMessage.toLowerCase();
             String botName = getBotUsername().toLowerCase();
-            String userName = update.getMessage().getFrom().getFirstName(); // Получение имени пользователя из сообщения
+            String userName = update.getMessage().getFrom().getFirstName();
             currentQuestionIndex = 0;
 
-            long chatId = update.getMessage().getChatId(); // Получаем chatId из объекта Update
+            long chatId = update.getMessage().getChatId();
 
             if (receivedMessage.equals("/start") || receivedMessage.equals("/start@" + botName)) {
-                isActive = true; // Активация бота
+                isActive = true;
                 if (update.getMessage().getChat().isUserChat()) {
                     threadId = 0;
                 }
 
                 startBot(chatId, threadId, userName);
 
-                sendPoll(chatId, threadId); // Отправка опроса
-            } else {
-                String sleepMessage = BotMessages.SLEEP_MESSAGE;
-                sendMessageToChat(chatId, threadId, sleepMessage, false);
+                sendPoll(chatId, threadId);
+            } else if (!isActive) {
+                boolean isCommand = false;
+                for (BotCommand command : LIST_OF_COMMANDS) {
+                    if (receivedMessage.equals(command.getCommand()) || receivedMessage.equals(command.getCommand() + "@" + botName)) {
+                        isCommand = true;
+                        break;
+                    }
+                }
+
+                if (isCommand) {
+                    String sleepMessage = BotMessages.SLEEP_MESSAGE;
+                    sendMessageToChat(chatId, threadId, sleepMessage, false);
+                }
             }
         }
     }
+
 
     private void startBot(long chatId, int threadId, String userName) {
         String startMessage = String.format(BotMessages.START_MESSAGE, userName);
@@ -101,8 +112,8 @@ public class QuizTelegramBot extends TelegramLongPollingBot implements BotComman
     }
 
     private void handleTextMessage(Message message) {
-        if (message == null) {
-            log.error("Передано пустое сообщение.");
+        if (message == null || message.getText() == null) {
+            log.error("Получено пустое сообщение или текст сообщения равен null.");
             return;
         }
 

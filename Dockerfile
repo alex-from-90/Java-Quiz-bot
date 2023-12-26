@@ -1,5 +1,5 @@
 # Используйте образ на основе Amazon Corretto 17
-FROM amazoncorretto:17
+FROM amazoncorretto:17-alpine-jdk
 
 # Устанавливаем рабочую директорию
 WORKDIR /app

@@ -2,7 +2,7 @@ package com.quiz.bot.components;
 
 public class BotMessages {
     public static final String START_MESSAGE = "Привет, %s!\nЯ квиз бот.";
-    public static final String IN_USE_TEXT = "Бот уже запущен\n /help для помощи";
+    public static final String IN_USE_TEXT = "Бот уже запущен\n /help для помощи\n /next - следующий вопрос";
     public static final String SLEEP_MESSAGE = "Бот спит\nРазбудить?\n /start";
     public static final String HELP_TEXT = """
             Этот бот написан на SpringBoot.
@@ -14,7 +14,7 @@ public class BotMessages {
             /help - Помощь
             /exit - Выход
 
-            Присоединится к разработке
+            Связаться с разработчиком
             @Site_n_ru
 
             Угостить разработчика кофе ;)
