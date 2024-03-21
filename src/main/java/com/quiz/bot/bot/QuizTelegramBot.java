@@ -12,9 +12,7 @@ import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
 import org.telegram.telegrambots.meta.api.methods.polls.SendPoll;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
-import org.telegram.telegrambots.meta.api.objects.Message;
-import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.*;
 import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
 import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
@@ -179,22 +177,49 @@ public class QuizTelegramBot extends TelegramLongPollingBot implements BotComman
 
 
     private void handleCallbackQuery(CallbackQuery callbackQuery) {
+        if (callbackQuery == null || callbackQuery.getMessage() == null) {
+            log.warn("CallbackQuery или Message равен null");
+            return;
+        }
+
         long chatId = callbackQuery.getMessage().getChatId();
-        Integer threadIdInteger = callbackQuery.getMessage().getMessageThreadId();
+        Integer threadIdInteger = null;
+
+        // Попробуем получить threadId, если доступен
+        Message message = null;
+        if (callbackQuery.getMessage() instanceof Message) {
+            message = (Message) callbackQuery.getMessage();
+            threadIdInteger = message.getMessageThreadId();
+        }
+
         int threadId = (threadIdInteger != null) ? threadIdInteger : 0; // Проверка на null и преобразование в int
 
         String receivedMessage = callbackQuery.getData();
         String userName = callbackQuery.getFrom().getFirstName();
 
-        if (callbackQuery.getMessage().getReplyToMessage() != null) {
-            callbackQuery.getMessage().getReplyToMessage().getFrom().getFirstName();
+        String replyingUserName = null; // Добавлено для хранения имени пользователя, на которого отвечает сообщение
+        MaybeInaccessibleMessage replyToMessage = callbackQuery.getMessage();
+
+        // Проверяем, является ли сообщение экземпляром Message и доступно ли оно
+        if (message != null && message.getDate() != null) {
+            replyingUserName = message.getFrom().getFirstName();
+        } else if (replyToMessage instanceof InaccessibleMessage) {
+            log.warn("Недоступное сообщение: {}", callbackQuery.getMessage().getMessageId());
+            // Обработка недоступного сообщения, если необходимо
+            // В данном случае мы просто пропускаем передачу сообщения в метод botAnswerUtils()
+            log.info("Обработка callback query от пользователя: {} (отвечает на недоступное сообщение)", userName);
+            log.info("Обработка callback query от пользователя {} завершена", userName);
+            return;
         }
 
-        log.info("Обработка callback query от пользователя: " + userName);
+        log.info("Обработка callback query от пользователя: {} (отвечает на пользователя: {})", userName, replyingUserName);
 
-        botAnswerUtils(receivedMessage, chatId, threadId, callbackQuery.getMessage());
+        if (message != null) {
+            log.info("Передача сообщения на обработку: {}", message.getMessageId());
+            botAnswerUtils(receivedMessage, chatId, threadId, message);
+        }
 
-        log.info("Обработка callback query от пользователя " + userName + " завершена");
+        log.info("Обработка callback query от пользователя {} завершена", userName);
     }
 
 
